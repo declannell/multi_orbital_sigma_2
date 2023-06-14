@@ -1,5 +1,7 @@
 #include "parameters.h"
-#include "gf.h"
+#include "interacting_gf.h"
+#include "current.h"
+#include "mb_self_energy.h"
 #include <iostream>
 #include <vector>
 #include <complex> //this contains complex numbers and trig functions
@@ -7,9 +9,7 @@
 #include <cmath>
 #include <limits>
 #include <iomanip>  
-#include "read_sigma.h"
 #include </usr/include/eigen3/Eigen/Dense>
-#include "current.h"
 using namespace std;
 
 int main(int argc, char **argv)
@@ -21,117 +21,74 @@ int main(int argc, char **argv)
 	//std::vector<double> kx(parameters.num_kx_points, 0);
 	//std::vector<double> ky(parameters.num_ky_points, 0);
     //get_momentum_vectors(kx, ky, parameters);
-	parameters.voltage = 0.5 * 1.375 / 13.6057039763;
-	parameters.num_orbitals = 30;
-    std::cout << parameters.num_orbitals  << "  " << parameters.voltage << " " << parameters.chemical_potential << std::endl;
+	std::vector<double> current_coherent(parameters.niv_points, 0), current_left(parameters.niv_points, 0), current_right(parameters.niv_points, 0);
 
-	std::vector<std::vector<dcomp>> sigma_mb_r_up, sigma_mb_r_down, sigma_mb_l_up, sigma_mb_l_down;
+	for (int m = parameters.niv_start; m < parameters.niv_points; m++) {
+		std::vector<Eigen::MatrixXcd> self_energy_mb_r(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
+			self_energy_mb_l(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
+			self_energy_left(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
+			self_energy_right(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
+			gf_lesser(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
+			gf_retarded(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));		
 
-	get_sigma(parameters, sigma_mb_r_up, sigma_mb_r_down, sigma_mb_l_up, sigma_mb_l_down);	
+		get_self_energies_wba(parameters, self_energy_left);
+		get_self_energies_wba(parameters, self_energy_right);
+			
+		get_self_energy(parameters, gf_retarded, gf_lesser, self_energy_left, self_energy_right, self_energy_mb_r, self_energy_mb_l, m);
 
+		
+		current_coherent.at(m) = get_current_transmission(parameters, gf_retarded, self_energy_left, self_energy_right, m);
+		current_left.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_left, 0, m);
+		current_right.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_right, 1, m);
 
-    std::vector<Eigen::MatrixXcd> gf_non_int_r_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		gf_non_int_r_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
+		std::cout << "The voltage is " << parameters.voltage_l[m] - parameters.voltage_r[m] << ". The coherent current is " << current_coherent.at(m) 
+			<< ". The left current is " << current_left.at(m) << ". The right current is " << current_right.at(m) << endl;
 
-	read_non_interacting_gf(parameters, gf_non_int_r_up, 1);
-	read_non_interacting_gf(parameters, gf_non_int_r_down, 2);
-
-    std::vector<Eigen::MatrixXcd> gf_int_r_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		gf_int_r_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-
-	get_interacting_gf(parameters, gf_non_int_r_up, sigma_mb_r_up, gf_int_r_up);
-	get_interacting_gf(parameters, gf_non_int_r_down, sigma_mb_r_down, gf_int_r_down);	
-
-	cout << "Got the interacting GF \n";
-	
-    std::vector<Eigen::MatrixXcd> gamma_left_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		gamma_right_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-    std::vector<Eigen::MatrixXcd> gamma_left_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		gamma_right_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-
-	read_gamma(parameters, gamma_left_up, gamma_right_up, 1);
-	read_gamma(parameters, gamma_left_down, gamma_right_down, 2);
-
-	cout << "Got the gamma matrices \n";
-
-    std::vector<Eigen::MatrixXcd> se_left_lesser_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		se_right_lesser_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-    std::vector<Eigen::MatrixXcd> se_left_lesser_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		se_right_lesser_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-
-	get_lesser_se(parameters, se_left_lesser_up, gamma_left_up, 0);
-	get_lesser_se(parameters, se_left_lesser_down, gamma_left_down, 0);
-	get_lesser_se(parameters, se_right_lesser_up, gamma_right_up, 1);
-	get_lesser_se(parameters, se_right_lesser_down, gamma_right_down, 1);
-
-	cout << "Got the lesser self energy \n";
-
-    std::vector<Eigen::MatrixXcd> gf_int_l_up(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)), 
-		gf_int_l_down(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
-
-	get_lesser_gf(parameters, gf_int_r_up, se_left_lesser_up, se_right_lesser_up, sigma_mb_l_up, gf_int_l_up);
-	get_lesser_gf(parameters, gf_int_r_down, se_left_lesser_down, se_right_lesser_down, sigma_mb_l_down, gf_int_l_down);
-
-
-	double current_up_l, current_up_r, current_down_l, current_down_r;
-
-	get_current(parameters, gf_int_r_up, gf_int_l_up, gamma_left_up, current_up_l, 0);
-	get_current(parameters, gf_int_r_up, gf_int_l_up, gamma_right_up, current_up_r, 1);
-	get_current(parameters, gf_int_r_down, gf_int_l_down, gamma_left_down, current_down_l, 0);
-	get_current(parameters, gf_int_r_down, gf_int_l_down, gamma_right_down, current_down_r, 1);
-
-	cout << "The spin up left current is " << current_up_l << endl;
-	cout << "The spin up right current is " << current_up_r << endl;
-	cout << "The spin down left current is " << current_down_l << endl;
-	cout << "The spin down right current is " << current_down_r << endl;
-
-	//for (int i = 0; i < parameters.num_orbitals; i++) {
-	//	std::ofstream my_file;
-	//	std::ostringstream oss;
-    //    oss << "se_left_up" << i + 1 <<  "_" << i + 1 << ".dat";
-    //    std::string var = oss.str();
-	//	my_file.open(var);
-	//	for(int r = 0; r < parameters.steps; r++) {
-	//		my_file << parameters.energy.at(r) << "  " << se_left_up.at(r)(i, i).real() << " " << se_left_up.at(r)(i, i).imag() << "\n";
-	//	}
-    //	my_file.close();
-	//}
-//
-	//for (int i = 0; i < parameters.num_orbitals; i++) {
-	//	std::ofstream my_file;
-	//	std::ostringstream oss;
-    //    oss << "se_left_lesser_up" << i + 1 <<  "_" << i + 1 << ".dat";
-    //    std::string var = oss.str();
-	//	my_file.open(var);
-	//	for(int r = 0; r < parameters.steps; r++) {
-	//		my_file << parameters.energy.at(r) << "  " << se_left_lesser_up.at(r)(i, i).real() << " " << se_left_lesser_up.at(r)(i, i).imag() << "\n";
-	//	}
-    //	my_file.close();
-	//}
-//
-	for (int i = 0; i < parameters.num_orbitals; i++) {
-		std::ofstream my_file;
-		std::ostringstream oss;
-        oss << "gf_int_l_up" << i + 1 <<  "_" << i + 1 << ".dat";
-        std::string var = oss.str();
-		my_file.open(var);
-		for(int r = 0; r < parameters.steps; r++) {
-			my_file << parameters.energy.at(r) << "  " << gf_int_l_up.at(r)(i, i).real() << " " << gf_int_l_up.at(r)(i, i).imag() << "\n";
+		std::ostringstream ossgf_lesser;
+		ossgf_lesser << m << ".gf_l.dat";
+		std::string var_gf_lesser = ossgf_lesser.str();
+		std::ofstream gf_l_file;
+		gf_l_file.open(var_gf_lesser);
+		for (int r = 0; r < parameters.steps; r++) {
+			gf_l_file << parameters.energy.at(r) << "  " << gf_lesser.at(r)(1, 0).real() << "   " << gf_lesser.at(r)(1, 0).imag() << "\n";
 		}
-    	my_file.close();
-	}
-	
-	for (int i = 0; i < parameters.num_orbitals; i++) {
-		std::ofstream my_file;
-		std::ostringstream oss;
-        oss << "gf_int_l_down" << i + 1 <<  "_" << i + 1 << ".dat";
-        std::string var = oss.str();
-		my_file.open(var);
-		for(int r = 0; r < parameters.steps; r++) {
-			my_file << parameters.energy.at(r) << "  " << gf_int_l_down.at(r)(i, i).real() << " " << gf_int_l_down.at(r)(i, i).imag() << "\n";
+		gf_l_file.close();	
+
+		std::ostringstream ossgf_retarded;
+		ossgf_retarded << m << ".gf_r.dat";
+		std::string var_gf_retarded = ossgf_retarded.str();
+		std::ofstream gf_retarded_file;
+		gf_retarded_file.open(var_gf_retarded);
+		for (int r = 0; r < parameters.steps; r++) {
+			gf_retarded_file << parameters.energy.at(r) << "  " << gf_retarded.at(r)(1, 0).real() << "   " << gf_retarded.at(r)(1, 0).imag() << "\n";
 		}
-    	my_file.close();
+		gf_retarded_file.close();	
+
+		std::ostringstream ossgf;
+		ossgf << m << ".mb_se_r.dat";
+		std::string var = ossgf.str();
+		std::ofstream se_mb_r_file;
+		se_mb_r_file.open(var);
+		for (int r = 0; r < parameters.steps; r++) {
+			se_mb_r_file << parameters.energy.at(r) << "  " << self_energy_mb_r.at(r)(0, 0).real() << "   " << self_energy_mb_r.at(r)(0, 0).imag() << "\n";
+		}
+		se_mb_r_file.close();		
+
+		std::ostringstream ossgf_l;
+		ossgf_l << m << ".mb_se_l.dat";
+		std::string var_l = ossgf_l.str();
+		std::ofstream se_mb_l_file;
+		se_mb_l_file.open(var_l);
+		for (int r = 0; r < parameters.steps; r++) {
+			se_mb_l_file << parameters.energy.at(r) << "  " << self_energy_mb_l.at(r)(0, 0).real() << "   " << self_energy_mb_l.at(r)(0, 0).imag() << "\n";
+		}
+		se_mb_l_file.close();	
 	}
+
+
+
+
+    //std::vector<Eigen::Matrix
     ////std::ofstream my_file;
 	////my_file.open("gf_int.dat");
 	////for(int r = 0; r < 1; r++) {
