@@ -42,7 +42,7 @@ struct Parameters
     bool print_gf;
     bool spin_polarised;
     double delta_energy;
-    bool kk_se; //if true then the code uses the kramer-kronig relation for the self energy
+    int kk_se; //if true then the code uses the kramer-kronig relation for the self energy
 };
 
 

@@ -79,7 +79,9 @@ Parameters Parameters::from_file()
 			} else if (variable == "spin_polarised") {
 				std::istringstream(value) >> parameters.spin_polarised;
             } else if (variable == "kk_se") {
-				std::istringstream(value) >> parameters.kk_se;
+				parameters.kk_se = std::stoi(value);
+			} else if (variable == "convergence") {
+				parameters.convergence = std::stod(value);
 			}
 	}
 	input_file.close();
@@ -133,5 +135,6 @@ void print_parameters(Parameters& parameters)
 	std::cout << "num_orbitals = " << parameters.num_orbitals << std::endl;
 	std::cout << "temperature = " << parameters.temperature << std::endl;
 	std::cout << "delta_gf = " << parameters.delta_gf << std::endl;
-	
+	std::cout << "parameters.convergence is " << parameters.convergence << std::endl;
+
 }

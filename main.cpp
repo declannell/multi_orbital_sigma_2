@@ -12,10 +12,28 @@
 #include </usr/include/eigen3/Eigen/Dense>
 using namespace std;
 
+void print_to_file(Parameters &parameters, string filename, std::vector<Eigen::MatrixXcd> &quantity, int orbital_1, int orbital_2, int voltage_step) {
+	std::ostringstream ossgf;
+	ossgf  << voltage_step << "_" << filename << "_" << orbital_1 << "_" << orbital_2 << ".dat";
+	std::string var = ossgf.str();
+	std::ofstream file;
+	std::cout << "Printing file " << var <<  "\n";
+	file.open(var);
+	for (int r = 0; r < parameters.steps; r++) {
+		file << parameters.energy.at(r) << "  " << quantity.at(r)(orbital_1, orbital_1).real() << "   " << quantity.at(r)(orbital_1, orbital_2).imag() << "\n";
+	}
+	file.close();	
+}
+
+
 int main(int argc, char **argv)
 {
     //std::cout << argv[1] << std::endl;
 	Parameters parameters = Parameters::from_file();
+    if (parameters.kk_se != 0) {
+        parameters.self_consistent_steps = 1;
+        std::cout << "The impurity solver can't be done self consistently with the Kramer-kronig yet \n";
+    }
     std::cout << "created parameters \n";
 	print_parameters(parameters);
 	//std::vector<double> kx(parameters.num_kx_points, 0);
@@ -44,57 +62,13 @@ int main(int argc, char **argv)
 		std::cout << "The voltage is " << parameters.voltage_l[m] - parameters.voltage_r[m] << ". The coherent current is " << current_coherent.at(m) 
 			<< ". The left current is " << current_left.at(m) << ". The right current is " << current_right.at(m) << endl;
 
-		std::ostringstream ossgf_lesser;
-		ossgf_lesser << m << ".gf_l.dat";
-		std::string var_gf_lesser = ossgf_lesser.str();
-		std::ofstream gf_l_file;
-		gf_l_file.open(var_gf_lesser);
-		for (int r = 0; r < parameters.steps; r++) {
-			gf_l_file << parameters.energy.at(r) << "  " << gf_lesser.at(r)(1, 0).real() << "   " << gf_lesser.at(r)(1, 0).imag() << "\n";
+		for (int i = 0; i < parameters.num_orbitals; i++) {
+			for (int j = 0; j < parameters.num_orbitals; j++) {
+				print_to_file(parameters, "gf_retarded", gf_retarded, i, j , m);
+				print_to_file(parameters, "gf_lesser", gf_lesser, i, j , m);
+				print_to_file(parameters, "se_retarded", self_energy_mb_r, i, j , m);
+				print_to_file(parameters, "se_lesser", self_energy_mb_l, i, j , m);
+			}
 		}
-		gf_l_file.close();	
-
-		std::ostringstream ossgf_retarded;
-		ossgf_retarded << m << ".gf_r.dat";
-		std::string var_gf_retarded = ossgf_retarded.str();
-		std::ofstream gf_retarded_file;
-		gf_retarded_file.open(var_gf_retarded);
-		for (int r = 0; r < parameters.steps; r++) {
-			gf_retarded_file << parameters.energy.at(r) << "  " << gf_retarded.at(r)(1, 0).real() << "   " << gf_retarded.at(r)(1, 0).imag() << "\n";
-		}
-		gf_retarded_file.close();	
-
-		std::ostringstream ossgf;
-		ossgf << m << ".mb_se_r.dat";
-		std::string var = ossgf.str();
-		std::ofstream se_mb_r_file;
-		se_mb_r_file.open(var);
-		for (int r = 0; r < parameters.steps; r++) {
-			se_mb_r_file << parameters.energy.at(r) << "  " << self_energy_mb_r.at(r)(0, 0).real() << "   " << self_energy_mb_r.at(r)(0, 0).imag() << "\n";
-		}
-		se_mb_r_file.close();		
-
-		std::ostringstream ossgf_l;
-		ossgf_l << m << ".mb_se_l.dat";
-		std::string var_l = ossgf_l.str();
-		std::ofstream se_mb_l_file;
-		se_mb_l_file.open(var_l);
-		for (int r = 0; r < parameters.steps; r++) {
-			se_mb_l_file << parameters.energy.at(r) << "  " << self_energy_mb_l.at(r)(0, 0).real() << "   " << self_energy_mb_l.at(r)(0, 0).imag() << "\n";
-		}
-		se_mb_l_file.close();	
 	}
-
-
-
-
-    //std::vector<Eigen::Matrix
-    ////std::ofstream my_file;
-	////my_file.open("gf_int.dat");
-	////for(int r = 0; r < 1; r++) {
-	////	cout <<  gf_non_int_r_up.at(r) << "\n";
-	////}
-    ////my_file.close();
-	//std::cout << "wrote file \n";
-
 }
