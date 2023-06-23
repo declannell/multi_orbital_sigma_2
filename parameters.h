@@ -43,6 +43,10 @@ struct Parameters
     bool spin_polarised;
     double delta_energy;
     int kk_se; //if true then the code uses the kramer-kronig relation for the self energy
+    double e_upper_bound_tilde;       // this is the max energy value
+    double e_lower_bound_tilde;
+    int multiple; // this is the multiple of the wider energy range.
+    int multiple_grids;    
 };
 
 

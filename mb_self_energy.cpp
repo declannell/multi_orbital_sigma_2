@@ -53,6 +53,67 @@ void get_difference_self_energy(const Parameters &parameters, std::vector<Eigen:
 	}
 }
 
+void get_se_mb_diagonal(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
+    std::vector<Eigen::MatrixXcd> &self_energy_mb_r, std::vector<Eigen::MatrixXcd> &self_energy_mb_l, int count) {
+    
+    std::vector<Eigen::MatrixXcd> gf_advanced(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
+        gf_greater(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals));
+    for (int r = 0; r < parameters.steps; r++) {
+        gf_advanced.at(r) = gf_retarded.at(r).adjoint();
+        gf_greater.at(r) = gf_retarded.at(r) - gf_advanced.at(r) + gf_lesser.at(r);
+    }
+
+   
+    for (int r = 0; r < parameters.steps; r++) {
+        dcomp result_retarded = 0, result_lesser;
+        //std::cout << "The value of r is " << r << std::endl;
+        for (int t = 0; t < parameters.num_orbitals; t++) {
+            for (int p = 0; p < parameters.num_orbitals; p++) {
+                for (int n = 0; n < parameters.num_orbitals; n++) { //spin degenerate so i multiple the first term by 2
+	                for (int i = 0; i < parameters.steps; i++) {
+		                for (int j = 0; j < parameters.steps; j++) {
+			                if (((i + j - r) > 0) && ((i + j - r) < parameters.steps)) {
+				                result_retarded += (2.0 * (gf_lesser.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_advanced.at(i + j - r)(t, t)
+                                        + gf_lesser.at(i)(n, n) * gf_retarded.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t)
+                                        + gf_retarded.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t)
+                                        + gf_retarded.at(i)(n, n) * gf_retarded.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t)) 
+                                - gf_lesser.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_advanced.at(i + j - r)(t, t)
+                                - gf_lesser.at(i)(n, n) * gf_retarded.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t)
+                                - gf_retarded.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t)
+                                - gf_retarded.at(i)(n, n) * gf_retarded.at(j)(p, p) * gf_lesser.at(i + j - r)(t, t));
+                                result_lesser += (2.0 * (gf_lesser.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_greater.at(i + j - r)(t, t)) 
+                                - gf_lesser.at(i)(n, n) * gf_lesser.at(j)(p, p) * gf_greater.at(i + j - r)(t, t));
+			                }
+		                }
+	                }
+                }
+            }
+        }
+
+        if (count == 0) {
+            for (int i = 0; i < parameters.num_orbitals; i++) {
+                for (int j = 0; j < parameters.num_orbitals; j++) {
+                    self_energy_mb_r.at(r)(i, j) = result_retarded * (parameters.delta_energy / (2.0 * M_PI)) * (parameters.delta_energy / (2.0 * M_PI)) * 
+                        parameters.hubbard_interaction * parameters.hubbard_interaction;
+                    self_energy_mb_l.at(r)(i, j) = result_lesser * (parameters.delta_energy / (2.0 * M_PI)) * (parameters.delta_energy / (2.0 * M_PI)) * 
+                        parameters.hubbard_interaction * parameters.hubbard_interaction;
+                }
+            }
+        } else {
+            //std::cout << "0.9 convergence method \n";
+            for (int i = 0; i < parameters.num_orbitals; i++) {
+                for (int j = 0; j < parameters.num_orbitals; j++) {
+                    self_energy_mb_r.at(r)(i, j) = 0.025 * result_retarded * (parameters.delta_energy / M_PI) * (parameters.delta_energy / (M_PI)) * 
+                        parameters.hubbard_interaction * parameters.hubbard_interaction + 0.9 * self_energy_mb_r.at(r)(i, j);
+                    self_energy_mb_l.at(r)(i, j) = 0.025 * result_lesser * (parameters.delta_energy / (M_PI)) * (parameters.delta_energy / (M_PI)) * 
+                        parameters.hubbard_interaction * parameters.hubbard_interaction + 0.9 * self_energy_mb_l.at(r)(i, j);
+                }
+            }
+        }
+    }
+}
+
+
 void get_se_mb(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
     std::vector<Eigen::MatrixXcd> &self_energy_mb_r, std::vector<Eigen::MatrixXcd> &self_energy_mb_l, int count) {
     
@@ -352,11 +413,15 @@ void get_self_energy(const Parameters &parameters, std::vector<Eigen::MatrixXcd>
         } else if (parameters.kk_se == 2) {
 	    	std::cout << "using the diagonal kramer-kronig approximation for second order perturbation theory\n";
 	    	self_energy_2nd_order_kk_diag_approx(parameters, gf_lesser_restruct, gf_retarded_restruct, self_energy_mb_r, self_energy_mb_l, voltage_step, count);            
-        } 
-        else {
+        } else if (parameters.kk_se == 0) {
             std::cout << "Using the brute force relations \n";
 	    	get_se_mb(parameters, gf_retarded, gf_lesser, self_energy_mb_r, self_energy_mb_l, count);
-	    }
+	    } else if (parameters.kk_se == 3){
+            std::cout << "Using the brute force diagonal relations \n";
+	    	get_se_mb_diagonal(parameters, gf_retarded, gf_lesser, self_energy_mb_r, self_energy_mb_l, count);            
+        } else {
+            std::cout << "have not specified an impurity solver. kk_se = 1 means brute force sigma_2. kk_se ==3 means diagonal brute force sigma 2 \n";
+        }
 
         get_gf_retarded(parameters, gf_retarded, self_energy_left, self_energy_right, self_energy_mb_r, hamiltonian);
         get_gf_lesser(parameters, gf_retarded, gf_lesser, self_energy_left_lesser, self_energy_right_lesser, self_energy_mb_l);

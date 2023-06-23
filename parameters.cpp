@@ -82,6 +82,14 @@ Parameters Parameters::from_file()
 				parameters.kk_se = std::stoi(value);
 			} else if (variable == "convergence") {
 				parameters.convergence = std::stod(value);
+			} else if (variable == "e_upper_bound_tilde") {
+				parameters.e_upper_bound_tilde = std::stod(value);
+			} else if (variable == "e_lower_bound_tilde") {
+				parameters.e_lower_bound_tilde = std::stod(value);
+			} else if (variable == "multiple") {
+				parameters.multiple = std::stoi(value);
+			}  else if (variable == "multiple_grids") {
+				parameters.multiple_grids = std::stoi(value);
 			}
 	}
 	input_file.close();
@@ -136,5 +144,8 @@ void print_parameters(Parameters& parameters)
 	std::cout << "temperature = " << parameters.temperature << std::endl;
 	std::cout << "delta_gf = " << parameters.delta_gf << std::endl;
 	std::cout << "parameters.convergence is " << parameters.convergence << std::endl;
-
+	std::cout << "e_upper_bound_tilde = " << parameters.e_upper_bound_tilde << std::endl;
+	std::cout << "e_lower_bound_tilde = " << parameters.e_lower_bound_tilde << std::endl;
+	std::cout << "multiple = " << parameters.multiple << std::endl;
+	std::cout << "multiple_grids = " << parameters.multiple_grids << std::endl;
 }
