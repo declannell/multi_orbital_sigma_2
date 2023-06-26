@@ -28,7 +28,7 @@ struct Parameters
     double gamma; //this is the value of the imag part of the self energy in the WBL.
     std::vector<double> voltage_r;
     std::vector<double> voltage_l;
-    int steps; // number of energy points we take
+    int steps; // number of energy points we take. The code will change to this a multiple of 10.
     std::vector<double> energy;
     static Parameters from_file();
     dcomp j1; // this is a complex number class defined within the complex library

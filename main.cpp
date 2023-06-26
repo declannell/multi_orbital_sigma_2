@@ -41,6 +41,10 @@ int main(int argc, char **argv)
     //get_momentum_vectors(kx, ky, parameters);
 	std::vector<double> current_coherent(parameters.niv_points, 0), current_left(parameters.niv_points, 0), current_right(parameters.niv_points, 0);
 
+	//for (int r = 0; r < parameters.steps; r++) {
+	//	std::cout << parameters.energy.at(r) << "  " << r << std::endl;
+	//}
+
 	for (int m = parameters.niv_start; m < parameters.niv_points; m++) {
 		std::vector<Eigen::MatrixXcd> self_energy_mb_r(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
 			self_energy_mb_l(parameters.steps, Eigen::MatrixXcd::Zero(parameters.num_orbitals, parameters.num_orbitals)),
@@ -56,8 +60,17 @@ int main(int argc, char **argv)
 
 		
 		current_coherent.at(m) = get_current_transmission(parameters, gf_retarded, self_energy_left, self_energy_right, m);
-		current_left.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_left, 0, m);
-		current_right.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_right, 1, m);
+		if (parameters.multiple_grids == 1) {
+			current_left.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_left, 0, m);
+			current_right.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_right, 1, m);
+			std::cout << current_left.at(m) << "  " << current_right.at(m) << "\n";
+			current_left.at(m) = get_current_mw_multiple_grids(parameters, gf_retarded, gf_lesser, self_energy_left, 0, m);
+			current_right.at(m) = get_current_mw_multiple_grids(parameters, gf_retarded, gf_lesser, self_energy_right, 1, m);
+		} else {
+			current_left.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_left, 0, m);
+			current_right.at(m) = get_current_mw(parameters, gf_retarded, gf_lesser, self_energy_right, 1, m);
+		}
+
 
 		std::cout << "The voltage is " << parameters.voltage_l[m] - parameters.voltage_r[m] << ". The coherent current is " << current_coherent.at(m) 
 			<< ". The left current is " << current_left.at(m) << ". The right current is " << current_right.at(m) << endl;
@@ -70,5 +83,7 @@ int main(int argc, char **argv)
 				print_to_file(parameters, "se_lesser", self_energy_mb_l, i, j , m);
 			}
 		}
+
+
 	}
 }

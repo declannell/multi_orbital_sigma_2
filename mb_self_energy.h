@@ -23,19 +23,24 @@ void get_difference_self_energy(const Parameters &parameters, std::vector<Eigen:
 
 double absolute_value(double num1);
 
-void get_f_function(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
-    std::vector<Eigen::MatrixXd> &f_function);
-
-void get_f_function(const Parameters &parameters, const std::vector<std::vector<std::vector<dcomp>>>  &gf_retarded,
-    const std::vector<std::vector<std::vector<dcomp>>>  &gf_lesser, 
-    std::vector<std::vector<std::vector<dcomp>>>  &f_function);
-
-void get_se_mb_kk(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
-    std::vector<Eigen::MatrixXcd> &self_energy_mb_r, std::vector<Eigen::MatrixXcd> &self_energy_mb_l);
-
 void restructure_gf(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf, std::vector<std::vector<std::vector<dcomp>>> &gf_restruct);
-
-double kramer_kronig_relation(const Parameters& parameters, std::vector<double>& impurity_self_energy_imag, int r);
 
 void get_se_mb_diagonal(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
     std::vector<Eigen::MatrixXcd> &self_energy_mb_r, std::vector<Eigen::MatrixXcd> &self_energy_mb_l, int count);
+
+int get_closest_index(const Parameters &parameters, double E_t);
+
+double get_delta(const Parameters &parameters, int i, int j);
+
+
+//void get_f_function(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
+//    std::vector<Eigen::MatrixXd> &f_function);
+
+//void get_f_function(const Parameters &parameters, const std::vector<std::vector<std::vector<dcomp>>>  &gf_retarded,
+//    const std::vector<std::vector<std::vector<dcomp>>>  &gf_lesser, 
+//    std::vector<std::vector<std::vector<dcomp>>>  &f_function);
+
+//void get_se_mb_kk(const Parameters &parameters, const std::vector<Eigen::MatrixXcd> &gf_retarded, const std::vector<Eigen::MatrixXcd> &gf_lesser, 
+//    std::vector<Eigen::MatrixXcd> &self_energy_mb_r, std::vector<Eigen::MatrixXcd> &self_energy_mb_l);
+
+//double kramer_kronig_relation(const Parameters& parameters, std::vector<double>& impurity_self_energy_imag, int r);

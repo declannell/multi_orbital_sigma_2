@@ -107,12 +107,47 @@ Parameters Parameters::from_file()
 	parameters.j1 = -1;
 	parameters.j1 = sqrt(parameters.j1);
 
-	parameters.delta_energy =
-	    (parameters.e_upper_bound - parameters.e_lower_bound) / (double)parameters.steps;
+	if (parameters.multiple_grids == 1) {
 
-	for (int i = 0; i < parameters.steps; i++) {
-		parameters.energy.at(i) = parameters.e_lower_bound + parameters.delta_energy * (double)i;
+		int rem = parameters.steps % 10;
+		if ( rem != 0) {
+			parameters.steps += rem;
+		}
+
+		parameters.delta_energy =
+		    (parameters.e_upper_bound_tilde - parameters.e_lower_bound_tilde) / ((double)parameters.steps * 0.8);
+
+		double e_upper = parameters.e_lower_bound_tilde + 0.8 * parameters.steps * parameters.delta_energy;
+		parameters.e_lower_bound = parameters.e_lower_bound_tilde - 0.1 * parameters.steps * parameters.multiple * parameters.delta_energy;
+		parameters.e_upper_bound = e_upper + 0.1 * parameters.steps * parameters.multiple * parameters.delta_energy;		
+		std::cout << parameters.e_lower_bound  << "  " << parameters.e_upper_bound << std::endl;
+
+
+		for (int r = 0; r < parameters.steps * 0.1; r++) {
+			int y = r + parameters.steps * 0.9;
+			parameters.energy.at(r) = parameters.e_lower_bound + r * parameters.multiple * parameters.delta_energy;
+			parameters.energy.at(y) = e_upper + r * parameters.multiple * parameters.delta_energy;
+		}
+
+		for (int r = 0; r < parameters.steps * 0.8; r++) {
+			int y = 0.1 * parameters.steps + r;
+			parameters.energy.at(y) = parameters.e_lower_bound_tilde + r * parameters.delta_energy;
+		}
+
+	} else {
+		parameters.e_upper_bound_tilde = parameters.e_upper_bound;
+		parameters.e_lower_bound_tilde = parameters.e_lower_bound;
+
+		parameters.delta_energy =
+		    (parameters.e_upper_bound - parameters.e_lower_bound) / (double)parameters.steps;
+
+
+
+		for (int i = 0; i < parameters.steps; i++) {
+			parameters.energy.at(i) = parameters.e_lower_bound + parameters.delta_energy * (double)i;
+		}
 	}
+
 	return parameters;
 }
 

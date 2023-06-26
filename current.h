@@ -13,3 +13,6 @@ double get_current_mw(Parameters &parameters, std::vector<Eigen::MatrixXcd> &gf_
 
 double get_current_transmission(Parameters &parameters, std::vector<Eigen::MatrixXcd> &gf_retarded, 
     std::vector<Eigen::MatrixXcd> &self_energy_left, std::vector<Eigen::MatrixXcd> &self_energy_right, int voltage_step);
+
+double get_current_mw_multiple_grids(Parameters &parameters, std::vector<Eigen::MatrixXcd> &gf_int_r, std::vector<Eigen::MatrixXcd> &gf_int_l,
+    std::vector<Eigen::MatrixXcd> &embedding_self_energy, int left_right, int voltage_step);
